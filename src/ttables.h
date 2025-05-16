@@ -84,7 +84,7 @@ class TTable {
   void NormalizeVB(const double alpha) {
     ttable.swap(counts);
 #pragma omp parallel for schedule(dynamic)
-    for (unsigned i = 0; i < ttable.size(); ++i) {
+    for (auto i = 0; i < ttable.size(); ++i) {
       double tot = 0;
       Word2Double& cpd = ttable[i];
       for (Word2Double::iterator it = cpd.begin(); it != cpd.end(); ++it)
@@ -101,7 +101,7 @@ class TTable {
   void Normalize() {
     ttable.swap(counts);
 #pragma omp parallel for schedule(dynamic)
-    for (unsigned i = 0; i < ttable.size(); ++i) {
+    for (auto i = 0; i < ttable.size(); ++i) {
       double tot = 0;
       Word2Double& cpd = ttable[i];
       for (Word2Double::iterator it = cpd.begin(); it != cpd.end(); ++it)
@@ -159,7 +159,7 @@ class TTable {
  private:
   void ClearCounts() {
 #pragma omp parallel for schedule(dynamic)
-    for (size_t i=0; i<counts.size();++i) {
+    for (auto i=0; i<counts.size();++i) {
       for (auto& cnt : counts[i]) {
         cnt.second = 0.0;
       }

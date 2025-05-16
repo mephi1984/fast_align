@@ -2,42 +2,44 @@
 #include <sstream>
 #include <vector>
 #include <fstream>
-
 #include <queue>
 #include <map>
 #include <set>
-#include <getopt.h>
 
 #include "alignment_io.h"
 
 using namespace std;
-
-struct option options[] = {
-    {"input_1",                 required_argument, 0,                  'i'},
-    {"input_2",                 required_argument, 0,                  'j'},
-    {"command",                 required_argument, 0,                  'c'},
-    {0,0,0,0}
-};
 
 string input_1;
 string input_2;
 string command;
 
 bool InitCommandLine(int argc, char** argv) {
-  while (1) {
-    int oi;
-    int c = getopt_long(argc, argv, "i:j:c:", options, &oi);
-    if (c == -1) break;
-    switch(c) {
-      case 'i': input_1 = optarg; break;
-      case 'j': input_2 = optarg; break;
-      case 'c': command = optarg; break;
-      default: return false;
+    for (int i = 1; i < argc; ++i) {
+        string arg = argv[i];
+
+        if (arg == "--input_1" || arg == "-i") {
+            if (i + 1 >= argc) return false;
+            input_1 = argv[++i];
+        }
+        else if (arg == "--input_2" || arg == "-j") {
+            if (i + 1 >= argc) return false;
+            input_2 = argv[++i];
+        }
+        else if (arg == "--command" || arg == "-c") {
+            if (i + 1 >= argc) return false;
+            command = argv[++i];
+        }
+        else {
+            // Unknown argument
+            return false;
+        }
     }
-  }
-  if (input_1.size() == 0) return false;
-  if (command.size() == 0) return false;
-  return true;
+
+    if (input_1.empty() || command.empty()) {
+        return false;
+    }
+    return true;
 }
 
 struct Command {

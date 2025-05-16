@@ -18,8 +18,9 @@
 #include <cmath>
 #include <utility>
 #include <fstream>
-#include <getopt.h>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "src/corpus.h"
 #include "src/ttables.h"
@@ -28,31 +29,31 @@
 using namespace std;
 
 struct PairHash {
-  size_t operator()(const pair<short, short>& x) const {
-    return (unsigned short) x.first << 16 | (unsigned) x.second;
-  }
+    size_t operator()(const pair<short, short>& x) const {
+        return (unsigned short)x.first << 16 | (unsigned)x.second;
+    }
 };
 
 Dict d; // integerization map
 
 void ParseLine(const string& line,
-               vector<unsigned>* src,
-               vector<unsigned>* trg) {
-  static const unsigned kDIV = d.Convert("|||");
-  vector<unsigned> tmp;
-  src->clear();
-  trg->clear();
-  d.ConvertWhitespaceDelimitedLine(line, kDIV, &tmp);
-  unsigned i = 0;
-  while (i < tmp.size() && tmp[i] != kDIV) {
-    src->push_back(tmp[i]);
-    ++i;
-  }
-  if (i < tmp.size() && tmp[i] == kDIV) {
-    ++i;
-    for (; i < tmp.size(); ++i)
-      trg->push_back(tmp[i]);
-  }
+    vector<unsigned>* src,
+    vector<unsigned>* trg) {
+    static const unsigned kDIV = d.Convert("|||");
+    vector<unsigned> tmp;
+    src->clear();
+    trg->clear();
+    d.ConvertWhitespaceDelimitedLine(line, kDIV, &tmp);
+    unsigned i = 0;
+    while (i < tmp.size() && tmp[i] != kDIV) {
+        src->push_back(tmp[i]);
+        ++i;
+    }
+    if (i < tmp.size() && tmp[i] == kDIV) {
+        ++i;
+        for (; i < tmp.size(); ++i)
+            trg->push_back(tmp[i]);
+    }
 }
 
 string input;
@@ -72,57 +73,79 @@ int no_null_word = 0;
 size_t thread_buffer_size = 10000;
 bool force_align = false;
 int print_scores = 0;
-struct option options[] = {
-    {"input",             required_argument, 0,                  'i'},
-    {"reverse",           no_argument,       &is_reverse,        1  },
-    {"iterations",        required_argument, 0,                  'I'},
-    {"favor_diagonal",    no_argument,       &favor_diagonal,    1  },
-    {"force_align",       required_argument, 0,                  'f'},
-    {"mean_srclen_multiplier", required_argument, 0,             'm'},
-    {"beam_threshold",    required_argument, 0,                  't'},
-    {"p0",                required_argument, 0,                  'q'},
-    {"diagonal_tension",  required_argument, 0,                  'T'},
-    {"optimize_tension",  no_argument,       &optimize_tension,  1  },
-    {"variational_bayes", no_argument,       &variational_bayes, 1  },
-    {"alpha",             required_argument, 0,                  'a'},
-    {"no_null_word",      no_argument,       &no_null_word,      1  },
-    {"conditional_probabilities", required_argument, 0,          'p'},
-    {"thread_buffer_size", required_argument, 0,                 'b'},
-    {0,0,0,0}
-};
 
 bool InitCommandLine(int argc, char** argv) {
-  while (1) {
-    int oi;
-    int c = getopt_long(argc,
-                        argv,
-                        "i:rI:df:m:t:q:T:ova:Np:b:s",
-                        options,
-                        &oi);
-    if (c == -1) break;
-    cerr << "ARG=" << (char)c << endl;
-    switch(c) {
-      case 'i': input = optarg; break;
-      case 'r': is_reverse = 1; break;
-      case 'I': ITERATIONS = atoi(optarg); break;
-      case 'd': favor_diagonal = 1; break;
-      case 'f': force_align = 1; conditional_probability_filename = optarg; break;
-      case 'm': mean_srclen_multiplier = atof(optarg); break;
-      case 't': beam_threshold = atof(optarg); break;
-      case 'q': prob_align_null = atof(optarg); break;
-      case 'T': favor_diagonal = 1; diagonal_tension = atof(optarg); break;
-      case 'o': optimize_tension = 1; break;
-      case 'v': variational_bayes = 1; break;
-      case 'a': alpha = atof(optarg); break;
-      case 'N': no_null_word = 1; break;
-      case 'p': conditional_probability_filename = optarg; break;
-      case 'b': thread_buffer_size = atoi(optarg); break;
-      case 's': print_scores = 1; break;
-      default: return false;
+    for (int i = 1; i < argc; ++i) {
+        string arg = argv[i];
+
+        if (arg == "--input" || arg == "-i") {
+            if (i + 1 >= argc) return false;
+            input = argv[++i];
+        }
+        else if (arg == "--reverse" || arg == "-r") {
+            is_reverse = 1;
+        }
+        else if (arg == "--iterations" || arg == "-I") {
+            if (i + 1 >= argc) return false;
+            ITERATIONS = atoi(argv[++i]);
+        }
+        else if (arg == "--favor_diagonal" || arg == "-d") {
+            favor_diagonal = 1;
+        }
+        else if (arg == "--force_align" || arg == "-f") {
+            force_align = true;
+            if (i + 1 >= argc) return false;
+            conditional_probability_filename = argv[++i];
+        }
+        else if (arg == "--mean_srclen_multiplier" || arg == "-m") {
+            if (i + 1 >= argc) return false;
+            mean_srclen_multiplier = atof(argv[++i]);
+        }
+        else if (arg == "--beam_threshold" || arg == "-t") {
+            if (i + 1 >= argc) return false;
+            beam_threshold = atof(argv[++i]);
+        }
+        else if (arg == "--p0" || arg == "-q") {
+            if (i + 1 >= argc) return false;
+            prob_align_null = atof(argv[++i]);
+        }
+        else if (arg == "--diagonal_tension" || arg == "-T") {
+            favor_diagonal = 1;
+            if (i + 1 >= argc) return false;
+            diagonal_tension = atof(argv[++i]);
+        }
+        else if (arg == "--optimize_tension" || arg == "-o") {
+            optimize_tension = 1;
+        }
+        else if (arg == "--variational_bayes" || arg == "-v") {
+            variational_bayes = 1;
+        }
+        else if (arg == "--alpha" || arg == "-a") {
+            if (i + 1 >= argc) return false;
+            alpha = atof(argv[++i]);
+        }
+        else if (arg == "--no_null_word" || arg == "-N") {
+            no_null_word = 1;
+        }
+        else if (arg == "--conditional_probabilities" || arg == "-p") {
+            if (i + 1 >= argc) return false;
+            conditional_probability_filename = argv[++i];
+        }
+        else if (arg == "--thread_buffer_size" || arg == "-b") {
+            if (i + 1 >= argc) return false;
+            thread_buffer_size = atoi(argv[++i]);
+        }
+        else if (arg == "--print_scores" || arg == "-s") {
+            print_scores = 1;
+        }
+        else {
+            // Unknown argument
+            return false;
+        }
     }
-  }
-  if (input.size() == 0) return false;
-  return true;
+
+    if (input.empty()) return false;
+    return true;
 }
 
 void UpdateFromPairs(const vector<string>& lines, const int lc, const int iter,
@@ -229,8 +252,8 @@ inline void AddTranslationOptions(vector<vector<unsigned> >& insert_buffer,
     TTable* s2t) {
   s2t->SetMaxE(insert_buffer.size()-1);
 #pragma omp parallel for schedule(dynamic)
-  for (unsigned e = 0; e < insert_buffer.size(); ++e) {
-    for (unsigned f : insert_buffer[e]) {
+  for (auto e = 0; e < insert_buffer.size(); ++e) {
+    for (unsigned int f : insert_buffer[e]) {
       s2t->Insert(e, f);
     }
     insert_buffer[e].clear();
@@ -406,7 +429,7 @@ int main(int argc, char** argv) {
         for (int ii = 0; ii < 8; ++ii) {
           double mod_feat = 0;
 #pragma omp parallel for reduction(+:mod_feat)
-          for(size_t i = 0; i < size_counts.size(); ++i) {
+          for(auto i = 0; i < size_counts.size(); ++i) {
             const pair<short,short>& p = size_counts[i].first;
             for (short j = 1; j <= p.first; ++j)
               mod_feat += size_counts[i].second * DiagonalAlignment::ComputeDLogZ(j, p.first, p.second, diagonal_tension);
